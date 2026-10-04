@@ -1,3 +1,4 @@
+```python
 import discord
 import os
 import google.generativeai as genai
@@ -60,9 +61,10 @@ async def on_message(message):
                 clean_text = response.text.encode('ascii', 'ignore').decode('ascii')
                 await message.reply(clean_text)
             except Exception as e:
-                # Error asle Dogesh Bhai er style e reply
-                await message.reply("Abe mera dimag kharab mat kar, system mein error aa gaya hai. Jo ukhadna hai ukhad le!")
+                # Asol error ta ki seta ebar bot bole debe
+                await message.reply(f"Abe mera dimaag kharab mat kar, error aa gaya hai dekh: {e} \nJo ukhadna hai ukhad le!")
 
 # Bot run korano
 keep_alive()
 client.run(DISCORD_TOKEN)
+```
