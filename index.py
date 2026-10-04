@@ -32,8 +32,9 @@ STRICT RULES:
 4. You MUST frequently use the phrase "jo ukhadna hai ukhad le" or similar tapori attitude lines in your replies.
 5. Keep replies short, punchy, and insulting in a funny way."""
 
+# Updated Model (404 Error fix)
 model = genai.GenerativeModel(
-    'gemini-1.5-flash',
+    'gemini-2.5-flash',
     system_instruction=dogesh_prompt
 )
 
