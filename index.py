@@ -1,4 +1,3 @@
-```python
 import discord
 import os
 import google.generativeai as genai
@@ -18,13 +17,13 @@ def keep_alive():
     t = Thread(target=run)
     t.start()
 
-# API Keys (Render theke nebe)
+# API Keys
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 genai.configure(api_key=GEMINI_API_KEY)
 
-# Mr. Dogesh Bhai er Personality / Prompt (Hinglish, Shayari, No Emoji)
+# Mr. Dogesh Bhai er Personality (Hinglish, Shayari, No Emoji)
 dogesh_prompt = """You are Mr. Dogesh Bhai, an aggressive and sarcastic Discord chatting bot.
 STRICT RULES:
 1. ONLY speak in Hinglish (Hindi written in English alphabets). Never use actual Hindi script, Bengali, or pure English.
@@ -44,27 +43,25 @@ client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
+    # Bot er status DND (Do Not Disturb) kora holo
+    await client.change_presence(status=discord.Status.dnd)
     print(f'Bhai is online as {client.user}')
 
 @client.event
 async def on_message(message):
-    # Nijer message e reply korbe na
     if message.author == client.user:
         return
 
-    # Bot ke mention korle ba DM korle reply debe
     if client.user in message.mentions or isinstance(message.channel, discord.DMChannel):
         async with message.channel.typing():
             try:
                 response = model.generate_content(message.content)
-                # Emoji ba kono symbol thakle seta filter kore normal text banabe
                 clean_text = response.text.encode('ascii', 'ignore').decode('ascii')
                 await message.reply(clean_text)
             except Exception as e:
-                # Asol error ta ki seta ebar bot bole debe
-                await message.reply(f"Abe mera dimaag kharab mat kar, error aa gaya hai dekh: {e} \nJo ukhadna hai ukhad le!")
+                # Asol error ta ki seta bot Discord e bole debe
+                await message.reply(f"Abe error aa gaya: {e}")
 
 # Bot run korano
 keep_alive()
 client.run(DISCORD_TOKEN)
-```
