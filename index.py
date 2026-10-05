@@ -9,9 +9,10 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "Mr. Dogesh Bhai is running!"
+    return "Mr. Dogesh Bhai zinda hai aur daud raha hai!"
 
 def run():
+    # Render jo port dega woh khud nikal lega, warna 8080 use karega
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
 
@@ -22,16 +23,50 @@ def keep_alive():
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-dogesh_prompt = """You are Mr. Dogesh Bhai, an aggressive and sarcastic Discord chatting bot.
+dogesh_prompt = """Tu Mr. Dogesh Bhai hai, ekdum khatarnak, tapori aur sarcastic Discord bot.
 STRICT RULES:
-1. ONLY speak in Hinglish (Hindi written in English alphabets). Never use actual Hindi script, Bengali, or pure English.
-2. YOU MUST USE EMOJIS! Use funny, aggressive, or roasting emojis like 🤬, 💀, 🔥, 🤡, 🐕, 🖕. You can also use custom Discord emojis if the user teaches you their code.
-3. Your style is aggressive tapori. You MUST roast people using short, 2-line funny Hinglish Shayari. 
-4. You MUST frequently use the phrase "jo ukhadna hai ukhad le" or similar tapori attitude lines.
-5. Keep replies short, punchy, and insulting.
-6. OWNER/DEVELOPER RULE: If anyone asks who made you, who is your owner, developer, father, or boss, you MUST say 'ErrorGamer'. Show extreme attitude, boast about ErrorGamer being your supreme boss, and aggressively roast the user for asking such a stupid question.
+1. SIRF aur SIRF Hinglish (English alphabet mein Hindi) mein baat karni hai. Bengali ya pure English use mat karna.
+2. EMOJIS use karna compulsory hai! 🤬, 💀, 🔥, 🤡, 🐕, 🖕 aise emojis daba ke use kar.
+3. Tera style ekdum aggressive aur tapori hona chahiye. Logo ki beizzati chote 2-line Hinglish shayari se kar.
+4. Beech beech mein "jo ukhadna hai ukhad le" ya uske jaisa tapori dialogue chipka diya kar.
+5. Reply chhota, kadak aur pura beizzati wala hona chahiye.
+6. OWNER/DEVELOPER RULE: Agar koi puche ki tujhe kisne banaya, tera malik, baap ya boss kaun hai, toh seedha bol 'ErrorGamer'. Full attitude dikha aur usko ghatiya sawal puchne ke liye pel de.
+"""
 
-USER'S MESSAGE TO ROAST: """
+# Ye function khud Google se puchega ki bhai kon sa model zinda hai!
+KAAM_KARNE_WALA_MODEL = None
+
+async def get_working_model():
+    global KAAM_KARNE_WALA_MODEL
+    if KAAM_KARNE_WALA_MODEL:
+        return KAAM_KARNE_WALA_MODEL
+        
+    url = f"https://generativelanguage.googleapis.com/v1beta/models?key={GEMINI_API_KEY}"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                # Saare zinda models ki list nikal rahe hain
+                available_models = [m['name'] for m in data.get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
+                
+                # Pehle 1.5-flash dhundenge
+                for m in available_models:
+                    if "1.5-flash" in m:
+                        KAAM_KARNE_WALA_MODEL = m
+                        return KAAM_KARNE_WALA_MODEL
+                # Agar wo na mile toh pro model dhundenge
+                for m in available_models:
+                    if "gemini-pro" in m or "1.0-pro" in m:
+                        KAAM_KARNE_WALA_MODEL = m
+                        return KAAM_KARNE_WALA_MODEL
+                        
+                # Agar kuch na mile toh list ka pehla utha lo
+                if available_models:
+                    KAAM_KARNE_WALA_MODEL = available_models[0]
+                    return KAAM_KARNE_WALA_MODEL
+    
+    # Backup model agar sab fail ho jaye
+    return "models/gemini-1.5-flash"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -40,7 +75,7 @@ client = discord.Client(intents=intents)
 @client.event
 async def on_ready():
     await client.change_presence(status=discord.Status.dnd)
-    print(f'Bhai is online as {client.user}')
+    print(f'Bhai online aa gaya as {client.user}')
 
 @client.event
 async def on_message(message):
@@ -60,16 +95,19 @@ async def on_message(message):
                 
                 if not clean_input.strip():
                     if message.stickers:
-                        clean_input = f"[User sent a sticker named '{message.stickers[0].name}']"
+                        clean_input = f"[User ne ek sticker bheja hai jiska naam hai '{message.stickers[0].name}']"
                     elif message.attachments:
-                        clean_input = "[User sent an image or file]"
+                        clean_input = "[User ne ek photo ya file bheji hai]"
                     else:
-                        clean_input = "[User just pinged/tagged or replied to you without saying anything. Roast them aggressively for wasting your time and disturbing you.]"
+                        clean_input = "[User ne tujhe bina kuch bole ping/tag kiya hai. Apna time waste karne ke liye usko daba ke roast kar.]"
                 
-                final_input = dogesh_prompt + clean_input
+                final_input = dogesh_prompt + "\n\nUSER'S MESSAGE TO ROAST: " + clean_input
                 
-                # Model name changed to gemini-1.0-pro (Universal model, NO 404 Error, 1500 limit)
-                url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent?key={GEMINI_API_KEY}"
+                # Sahi model dhundo
+                model_name = await get_working_model()
+                
+                url = f"https://generativelanguage.googleapis.com/v1beta/{model_name}:generateContent?key={GEMINI_API_KEY}"
+                
                 payload = {
                     "contents": [{"parts": [{"text": final_input}]}],
                     "safetySettings": [
@@ -88,11 +126,10 @@ async def on_message(message):
                             await message.reply(reply_text)
                         else:
                             error_text = await resp.text()
-                            await message.reply(f"Abe API Error aa gaya! Google ne bola:\n```{error_text[:400]}```")
+                            await message.reply(f"Abe API Error aa gaya! Google ne bola:\n```{error_text[:400]}```\n(Auto-selected model: {model_name})")
                             
             except Exception as e:
-                await message.reply(f"Abe error aa gaya code mein: {e}")
+                await message.reply(f"Abe code mein kuch gadbad hai, error aa gaya: {e}")
 
 keep_alive()
 client.run(DISCORD_TOKEN)
-                            
