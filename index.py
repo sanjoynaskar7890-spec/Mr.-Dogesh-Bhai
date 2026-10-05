@@ -1,7 +1,6 @@
 import discord
 import os
-import json
-import aiohttp
+import google.generativeai as genai
 from flask import Flask
 from threading import Thread
 import re
@@ -22,6 +21,11 @@ def keep_alive():
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
+genai.configure(api_key=GEMINI_API_KEY)
+
+# 1500 limit er 100% stable model
+model = genai.GenerativeModel('gemini-pro')
+
 dogesh_prompt = """You are Mr. Dogesh Bhai, an aggressive and sarcastic Discord chatting bot.
 STRICT RULES:
 1. ONLY speak in Hinglish (Hindi written in English alphabets). Never use actual Hindi script, Bengali, or pure English.
@@ -29,37 +33,9 @@ STRICT RULES:
 3. Your style is aggressive tapori. You MUST roast people using short, 2-line funny Hinglish Shayari. 
 4. You MUST frequently use the phrase "jo ukhadna hai ukhad le" or similar tapori attitude lines.
 5. Keep replies short, punchy, and insulting.
-6. OWNER/DEVELOPER RULE: If anyone asks who made you, who is your owner, developer, father, or boss, you MUST say 'ErrorGamer'. Show extreme attitude, boast about ErrorGamer being your supreme boss, and aggressively roast the user for asking such a stupid question."""
+6. OWNER/DEVELOPER RULE: If anyone asks who made you, who is your owner, developer, father, or boss, you MUST say 'ErrorGamer'. Show extreme attitude, boast about ErrorGamer being your supreme boss, and aggressively roast the user for asking such a stupid question.
 
-# Direct API Call method to bypass Render's lazy package updates
-async def generate_roast(user_message):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-    headers = {'Content-Type': 'application/json'}
-    data = {
-        "system_instruction": {
-            "parts": [{"text": dogesh_prompt}]
-        },
-        "contents": [
-            {"parts": [{"text": user_message}]}
-        ],
-        "safetySettings": [
-            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
-        ]
-    }
-    
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, headers=headers, json=data) as response:
-            if response.status == 200:
-                result = await response.json()
-                try:
-                    return result['candidates'][0]['content']['parts'][0]['text']
-                except KeyError:
-                    return "Abe oye, Google ne limit laga di meri baaton pe! (Safety Blocked)"
-            else:
-                return f"Abe Google server se 404 nahi, status {response.status} aa gaya!"
+USER'S MESSAGE TO ROAST: """
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -94,11 +70,15 @@ async def on_message(message):
                     else:
                         clean_input = "[User just pinged/tagged or replied to you without saying anything. Roast them aggressively for wasting your time and disturbing you.]"
                 
-                reply_text = await generate_roast(clean_input)
+                # Rule er sathe user er kotha jure dewa holo
+                final_input = dogesh_prompt + clean_input
+                
+                response = model.generate_content(final_input)
+                reply_text = response.text.encode('utf-8', 'ignore').decode('utf-8')
                 await message.reply(reply_text)
                 
             except Exception as e:
-                await message.reply(f"Abe error aa gaya code mein: {e}")
+                await message.reply(f"Abe error aa gaya: {e}")
 
 keep_alive()
 client.run(DISCORD_TOKEN)
