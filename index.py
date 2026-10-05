@@ -12,7 +12,6 @@ def home():
     return "Mr. Dogesh Bhai is running!"
 
 def run():
-    # Render er dewa port auto-detect korbe, na pele 8080 nebe
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
 
@@ -69,7 +68,8 @@ async def on_message(message):
                 
                 final_input = dogesh_prompt + clean_input
                 
-                url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+                # Model name changed to gemini-1.0-pro (Universal model, NO 404 Error, 1500 limit)
+                url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent?key={GEMINI_API_KEY}"
                 payload = {
                     "contents": [{"parts": [{"text": final_input}]}],
                     "safetySettings": [
@@ -95,3 +95,4 @@ async def on_message(message):
 
 keep_alive()
 client.run(DISCORD_TOKEN)
+                            
