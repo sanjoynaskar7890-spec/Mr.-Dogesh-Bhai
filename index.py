@@ -1,6 +1,6 @@
 import discord
 import os
-import google.generativeai as genai
+import aiohttp
 from flask import Flask
 from threading import Thread
 import re
@@ -12,7 +12,9 @@ def home():
     return "Mr. Dogesh Bhai is running!"
 
 def run():
-    app.run(host='0.0.0.0', port=8080)
+    # Render er dewa port auto-detect korbe, na pele 8080 nebe
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
 
 def keep_alive():
     t = Thread(target=run)
@@ -20,11 +22,6 @@ def keep_alive():
 
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-
-genai.configure(api_key=GEMINI_API_KEY)
-
-# 1500 limit er 100% stable model 'gemini-1.0-pro'
-model = genai.GenerativeModel('gemini-1.0-pro')
 
 dogesh_prompt = """You are Mr. Dogesh Bhai, an aggressive and sarcastic Discord chatting bot.
 STRICT RULES:
@@ -70,15 +67,31 @@ async def on_message(message):
                     else:
                         clean_input = "[User just pinged/tagged or replied to you without saying anything. Roast them aggressively for wasting your time and disturbing you.]"
                 
-                # Rule er sathe user er kotha jure dewa holo
                 final_input = dogesh_prompt + clean_input
                 
-                response = model.generate_content(final_input)
-                reply_text = response.text.encode('utf-8', 'ignore').decode('utf-8')
-                await message.reply(reply_text)
+                url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+                payload = {
+                    "contents": [{"parts": [{"text": final_input}]}],
+                    "safetySettings": [
+                        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+                    ]
+                }
                 
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(url, json=payload) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            reply_text = data['candidates'][0]['content']['parts'][0]['text']
+                            await message.reply(reply_text)
+                        else:
+                            error_text = await resp.text()
+                            await message.reply(f"Abe API Error aa gaya! Google ne bola:\n```{error_text[:400]}```")
+                            
             except Exception as e:
-                await message.reply(f"Abe error aa gaya: {e}")
+                await message.reply(f"Abe error aa gaya code mein: {e}")
 
 keep_alive()
 client.run(DISCORD_TOKEN)
