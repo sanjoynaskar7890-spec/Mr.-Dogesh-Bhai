@@ -23,9 +23,6 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 genai.configure(api_key=GEMINI_API_KEY)
 
-# 1500 limit er 100% stable model
-model = genai.GenerativeModel('gemini-pro')
-
 dogesh_prompt = """You are Mr. Dogesh Bhai, an aggressive and sarcastic Discord chatting bot.
 STRICT RULES:
 1. ONLY speak in Hinglish (Hindi written in English alphabets). Never use actual Hindi script, Bengali, or pure English.
@@ -33,9 +30,13 @@ STRICT RULES:
 3. Your style is aggressive tapori. You MUST roast people using short, 2-line funny Hinglish Shayari. 
 4. You MUST frequently use the phrase "jo ukhadna hai ukhad le" or similar tapori attitude lines.
 5. Keep replies short, punchy, and insulting.
-6. OWNER/DEVELOPER RULE: If anyone asks who made you, who is your owner, developer, father, or boss, you MUST say 'ErrorGamer'. Show extreme attitude, boast about ErrorGamer being your supreme boss, and aggressively roast the user for asking such a stupid question.
+6. OWNER/DEVELOPER RULE: If anyone asks who made you, who is your owner, developer, father, or boss, you MUST say 'ErrorGamer'. Show extreme attitude, boast about ErrorGamer being your supreme boss, and aggressively roast the user for asking such a stupid question."""
 
-USER'S MESSAGE TO ROAST: """
+# 1500 limit er jonno gemini-1.5-flash
+model = genai.GenerativeModel(
+    'gemini-1.5-flash',
+    system_instruction=dogesh_prompt
+)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -70,10 +71,7 @@ async def on_message(message):
                     else:
                         clean_input = "[User just pinged/tagged or replied to you without saying anything. Roast them aggressively for wasting your time and disturbing you.]"
                 
-                # Rule er sathe user er kotha jure dewa holo
-                final_input = dogesh_prompt + clean_input
-                
-                response = model.generate_content(final_input)
+                response = model.generate_content(clean_input)
                 reply_text = response.text.encode('utf-8', 'ignore').decode('utf-8')
                 await message.reply(reply_text)
                 
