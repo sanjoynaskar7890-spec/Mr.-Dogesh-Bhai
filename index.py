@@ -63,11 +63,15 @@ async def on_message(message):
                 clean_input = re.sub(r'<@!?\d+>', '', message.content) 
                 clean_input = re.sub(r'<a?:\w+:\d+>', '', clean_input) 
                 
-                # Jodi text puro faka hoy kintu user sticker ba image day
-                if not clean_input.strip() and message.stickers:
-                    clean_input = f"[User sent a sticker named '{message.stickers[0].name}']"
-                elif not clean_input.strip() and message.attachments:
-                    clean_input = "[User sent an image or file]"
+                # Check if input is empty after removing tags
+                if not clean_input.strip():
+                    if message.stickers:
+                        clean_input = f"[User sent a sticker named '{message.stickers[0].name}']"
+                    elif message.attachments:
+                        clean_input = "[User sent an image or file]"
+                    else:
+                        # User sudhu tag koreche, kono kotha boleni
+                        clean_input = "[User just pinged/tagged you without saying anything. Roast them aggressively for wasting your time and disturbing you.]"
                 
                 # Gemini k call kora
                 response = model.generate_content(clean_input)
