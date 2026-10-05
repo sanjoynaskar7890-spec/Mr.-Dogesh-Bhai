@@ -32,9 +32,9 @@ STRICT RULES:
 5. Keep replies short, punchy, and insulting.
 6. OWNER/DEVELOPER RULE: If anyone asks who made you, who is your owner, developer, father, or boss, you MUST say 'ErrorGamer'. Show extreme attitude, boast about ErrorGamer being your supreme boss, and aggressively roast the user for asking such a stupid question."""
 
-# Daily 1500 limit er jonno gemini-1.5-flash set kora holo
+# 1500 Limit pabar jonno "-latest" add kora holo jate 404 error na ashe
 model = genai.GenerativeModel(
-    'gemini-1.5-flash',
+    'gemini-1.5-flash-latest',
     system_instruction=dogesh_prompt
 )
 
